@@ -65,51 +65,52 @@ def format_arguments(ops):
         return ["NO_ARG"] * 3
     
     ops = ops.strip()
+    arguments = []
+    current = ""
+    in_brackets = 0
+    in_braces = 0
     
-    if '{' in ops and '}' in ops:
-        parts = [ops]
-        parts.extend(["NO_ARG"] * (2 if len(parts) == 1 else 1))
-        return parts[:3]
+    for char in ops:
+        if char == '[':
+            in_brackets += 1
+        elif char == ']':
+            in_brackets -= 1
+        elif char == '{':
+            in_braces += 1
+        elif char == '}':
+            in_braces -= 1
+        
+        if char == ',' and in_brackets == 0 and in_braces == 0:
+            arguments.append(current.strip())
+            current = ""
+            if len(arguments) == 2:
+                break
+        else:
+            current += char
     
-    if '[' in ops and ']' in ops:
-        parts = []
-        current = ""
-        in_brackets = 0
-        
-        for char in ops:
-            if char == '[':
-                in_brackets += 1
-            elif char == ']':
-                in_brackets -= 1
-            
-            if char == ',' and in_brackets == 0 and len(parts) < 2:
-                parts.append(current.strip())
-                current = ""
-            else:
-                current += char
-        
-        if current:
-            parts.append(current.strip())
-        
-        while len(parts) < 3:
-            parts.append("NO_ARG")
-        
-        return parts[:3]
+    if current:
+        arguments.append(current.strip())
     
-    parts = ops.split(',', 2)
-    parts = [p.strip() for p in parts]
-    while len(parts) < 3:
-        parts.append("NO_ARG")
-    return parts[:3]
+    while len(arguments) < 3:
+        arguments.append("NO_ARG")
+    
+    return arguments[:3]
 
 def process_row(row):
     try:
         hex_val = row[0]
         arm_op = row[1]
-        arm_args = [classify_argument(arg, True) for arg in format_arguments(row[2])]
+        arm_ops = row[2]
         x64_op = row[5]
-        x64_args = [classify_argument(arg, False) for arg in format_arguments(row[6])]
-        return [hex_val, arm_op] + arm_args + [x64_op] + x64_args
+        x64_ops = row[6]
+        
+        arm_args = format_arguments(arm_ops)
+        x64_args = format_arguments(x64_ops)
+        
+        arm_class = [classify_argument(arg, True) for arg in arm_args]
+        x64_class = [classify_argument(arg, False) for arg in x64_args]
+        
+        return [hex_val, arm_op] + arm_class + [x64_op] + x64_class
     except:
         return []
 
