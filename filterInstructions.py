@@ -1,6 +1,6 @@
 import csv
 import re
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from multiprocessing import Pool, cpu_count
 
 def classify_argument(arg, is_arm=True):
     if arg == "NO_ARG":
@@ -77,7 +77,10 @@ def read_csv_in_chunks(file_path, chunk_size):
         if chunk:
             yield chunk
 
-def process_csv(input_file, output_file, chunk_size=1000, max_threads=12):
+def process_csv(input_file, output_file, chunk_size=1000, num_workers=None):
+    if num_workers is None:
+        num_workers = cpu_count()
+    
     with open(output_file, 'w', newline='') as outfile:
         writer = csv.writer(outfile, delimiter='|')
         with open(input_file, 'r') as infile:
@@ -86,17 +89,13 @@ def process_csv(input_file, output_file, chunk_size=1000, max_threads=12):
             new_headers = ["ARM64_operand"] + [f"ARM_arg{i+1}" for i in range(10)] + ["X64_operand"] + [f"X64_arg{i+1}" for i in range(10)]
             writer.writerow(new_headers)
         
-        with ThreadPoolExecutor(max_workers=max_threads) as executor:
-            futures = []
+        with Pool(processes=num_workers) as pool:
             for chunk in read_csv_in_chunks(input_file, chunk_size):
-                future = executor.submit(process_chunk, chunk)
-                futures.append(future)
-                for future in as_completed(futures):
-                    for processed_row in future.result():
-                        writer.writerow(processed_row)
-                    futures.remove(future)
+                results = pool.map(process_chunk, [chunk])
+                for processed_rows in results:
+                    writer.writerows(processed_rows)
 
 if __name__ == "__main__":
-    input_file = '4Bytes_filled.csv'
-    output_file = '4Bytes_processed.csv'
-    process_csv(input_file, output_file, chunk_size=1000, max_threads=12)
+    input_file = 'processed_csv/4Bytes_processed.csv'
+    output_file = '4Bytes_filtered.csv'
+    process_csv(input_file, output_file, chunk_size=10000)
