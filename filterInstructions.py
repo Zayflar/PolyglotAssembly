@@ -31,7 +31,7 @@ def classify_argument(arg, is_arm=True):
     
     if is_arm and arg.lower() in arm64_registers:
         return "R"
-    elif not is_arm and arg.lower() in x64_registers:
+    elif not is_arm and (arg.lower() in x64_registers or re.match(r'^(byte|word|dword|qword) ptr \[[a-z0-9_+\-]+\]$', arg, re.IGNORECASE)):
         return "R"
     
     if re.match(r'^#-?0x[0-9a-fA-F]+$', arg) or re.match(r'^#-?\d+$', arg):
@@ -52,10 +52,7 @@ def classify_argument(arg, is_arm=True):
     return "UNK"
 
 def format_arguments(ops):
-    argument = ops.split(', ') if ops else []
-    while len(argument) < 3:
-        argument.append("NO_ARG")
-    return argument[:3]
+    return ops.split(', ') if ops else []
 
 def process_row(row):
     arm_operand = row[1]
@@ -86,10 +83,7 @@ def process_csv(input_file, output_file, chunk_size=1000, max_threads=12):
         with open(input_file, 'r') as infile:
             reader = csv.reader(infile, delimiter='|')
             headers = next(reader)
-            new_headers = [
-                "ARM64_operand", "ARM_arg1", "ARM_arg2", "ARM_arg3",
-                "X64_operand", "X64_arg1", "X64_arg2", "X64_arg3"
-            ]
+            new_headers = ["ARM64_operand"] + [f"ARM_arg{i+1}" for i in range(10)] + ["X64_operand"] + [f"X64_arg{i+1}" for i in range(10)]
             writer.writerow(new_headers)
         
         with ThreadPoolExecutor(max_workers=max_threads) as executor:
