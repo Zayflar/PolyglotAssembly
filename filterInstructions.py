@@ -94,47 +94,37 @@ def format_arguments(ops):
     return arguments[:3]
 
 def process_row(row):
-    arm_operand = row[1]
-    arm_args = [classify_argument(arg, is_arm=True) for arg in format_arguments(row[2])]
-    x64_operand = row[5]
-    x64_args = [classify_argument(arg, is_arm=False) for arg in format_arguments(row[6])]
-    return [arm_operand] + arm_args + [x64_operand] + x64_args
+    try:
+        arm_operand = row[1]
+        arm_args = [classify_argument(arg, is_arm=True) for arg in format_arguments(row[2])]
+        x64_operand = row[5]
+        x64_args = [classify_argument(arg, is_arm=False) for arg in format_arguments(row[6])]
+        return [arm_operand] + arm_args + [x64_operand] + x64_args
+    except IndexError:
+        return []
 
 def process_chunk(chunk):
-    return [process_row(row) for row in chunk]
-
-def read_csv_in_chunks(file_path, chunk_size):
-    with open(file_path, 'r') as file:
-        reader = csv.reader(file, delimiter='|')
-        headers = next(reader)
-        chunk = []
-        for row in reader:
-            chunk.append(row)
-            if len(chunk) >= chunk_size:
-                yield chunk
-                chunk = []
-        if chunk:
-            yield chunk
+    return [row for row in (process_row(r) for r in chunk) if row]
 
 def worker(input_queue, output_queue):
     while True:
         chunk = input_queue.get()
-        if chunk is None:
+        if chunk == "STOP":
+            output_queue.put("DONE")
             break
         result = process_chunk(chunk)
         output_queue.put(result)
 
-def process_csv(input_file, output_file, chunk_size=1000, num_processes=12):
-    input_queue = multiprocessing.Queue()
-    output_queue = multiprocessing.Queue()
+def process_csv(input_file, output_file, chunk_size=10000, num_processes=32):
+    manager = multiprocessing.Manager()
+    input_queue = manager.Queue()
+    output_queue = manager.Queue()
 
-    processes = [
-        multiprocessing.Process(target=worker, args=(input_queue, output_queue))
-        for _ in range(num_processes)
-    ]
-
-    for p in processes:
+    processes = []
+    for _ in range(num_processes):
+        p = multiprocessing.Process(target=worker, args=(input_queue, output_queue))
         p.start()
+        processes.append(p)
 
     with open(output_file, 'w', newline='') as outfile:
         writer = csv.writer(outfile, delimiter='|')
@@ -143,25 +133,41 @@ def process_csv(input_file, output_file, chunk_size=1000, num_processes=12):
             "X64_operand", "X64_arg1", "X64_arg2", "X64_arg3"
         ])
 
-        for chunk in read_csv_in_chunks(input_file, chunk_size):
-            input_queue.put(chunk)
+        def writer_loop():
+            active_workers = num_processes
+            while active_workers > 0:
+                result = output_queue.get()
+                if result == "DONE":
+                    active_workers -= 1
+                else:
+                    for row in result:
+                        writer.writerow(row)
+
+        writer_process = multiprocessing.Process(target=writer_loop)
+        writer_process.start()
+
+        with open(input_file, 'r') as infile:
+            reader = csv.reader(infile, delimiter='|')
+            next(reader)  # skip header
+            chunk = []
+            for row in reader:
+                chunk.append(row)
+                if len(chunk) >= chunk_size:
+                    input_queue.put(chunk)
+                    chunk = []
+            if chunk:
+                input_queue.put(chunk)
 
         for _ in range(num_processes):
-            input_queue.put(None)
+            input_queue.put("STOP")
 
-        processed = 0
-        while processed < num_processes:
-            result = output_queue.get()
-            if result == "DONE":
-                processed += 1
-                continue
-            for row in result:
-                writer.writerow(row)
+        writer_process.join()
 
     for p in processes:
         p.join()
 
+
 if __name__ == "__main__":
     input_file = 'processed_csv/4Bytes_processed.csv'
     output_file = '4Bytes_filtered.csv'
-    process_csv(input_file, output_file, chunk_size=10000, num_processes=32)
+    process_csv(input_file, output_file)
