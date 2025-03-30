@@ -17,7 +17,8 @@ def classify_argument(arg, is_arm=True):
         *[f"h{i}" for i in range(32)],
         *[f"b{i}" for i in range(32)],
         "sp", "pc", "zr",
-        *[f"z{i}" for i in range(32)]
+        *[f"z{i}" for i in range(32)],
+        *[f"p{i}" for i in range(16)]
     }
     
     x64_registers = {
@@ -33,13 +34,14 @@ def classify_argument(arg, is_arm=True):
     }
 
     if is_arm:
-        base_reg = re.split(r'[\.\[]', arg)[0]
+        base_reg = re.split(r'[\.\/\[]', arg)[0]
         if base_reg in arm64_registers:
             return "R"
+        if re.match(r'^p\d+/[zm]$', arg):
+            return "P"
     else:
         if arg in x64_registers:
             return "R"
-        
         ptr_match = re.match(r'^\s*(byte|word|dword|qword)\s+ptr\s*\[([^\]]+)\]', arg)
         if ptr_match and ptr_match.group(2).strip() in x64_registers:
             return "R"
@@ -56,46 +58,49 @@ def classify_argument(arg, is_arm=True):
     if re.match(r'^(lsl|lsr|asr|ror)\s+#', arg):
         return "S"
     
-    if re.match(r'^p\d+/[zm]$', arg):
-        return "P"
-    
-    if is_arm and re.match(r'^[xwvqdsbhz]\d+', arg):
-        return "R"
-    
     return "UNK"
 
 def format_arguments(ops):
     if not ops or not ops.strip():
         return ["NO_ARG"] * 3
     
+    ops = ops.strip()
+    
     if '{' in ops and '}' in ops:
-        parts = [ops.strip()]
+        parts = [ops]
         parts.extend(["NO_ARG"] * (2 if len(parts) == 1 else 1))
         return parts[:3]
     
-    arguments = []
-    current = ""
-    in_brackets = 0
-    
-    for char in ops:
-        if char == '[':
-            in_brackets += 1
-        elif char == ']':
-            in_brackets -= 1
+    if '[' in ops and ']' in ops:
+        parts = []
+        current = ""
+        in_brackets = 0
         
-        if char == ',' and in_brackets == 0 and len(arguments) < 2:
-            arguments.append(current.strip())
-            current = ""
-        else:
-            current += char
+        for char in ops:
+            if char == '[':
+                in_brackets += 1
+            elif char == ']':
+                in_brackets -= 1
+            
+            if char == ',' and in_brackets == 0 and len(parts) < 2:
+                parts.append(current.strip())
+                current = ""
+            else:
+                current += char
+        
+        if current:
+            parts.append(current.strip())
+        
+        while len(parts) < 3:
+            parts.append("NO_ARG")
+        
+        return parts[:3]
     
-    if current:
-        arguments.append(current.strip())
-    
-    while len(arguments) < 3:
-        arguments.append("NO_ARG")
-    
-    return arguments[:3]
+    parts = ops.split(',', 2)
+    parts = [p.strip() for p in parts]
+    while len(parts) < 3:
+        parts.append("NO_ARG")
+    return parts[:3]
 
 def process_row(row):
     try:
