@@ -95,11 +95,12 @@ def format_arguments(ops):
 
 def process_row(row):
     try:
+        hexa_value = row[0]
         arm_operand = row[1]
         arm_args = [classify_argument(arg, is_arm=True) for arg in format_arguments(row[2])]
         x64_operand = row[5]
         x64_args = [classify_argument(arg, is_arm=False) for arg in format_arguments(row[6])]
-        return [arm_operand] + arm_args + [x64_operand] + x64_args
+        return [hexa_value, arm_operand] + arm_args + [x64_operand] + x64_args
     except IndexError:
         return []
 
@@ -129,7 +130,7 @@ def process_csv(input_file, output_file, chunk_size=10000, num_processes=32):
     with open(output_file, 'w', newline='') as outfile:
         writer = csv.writer(outfile, delimiter='|')
         writer.writerow([
-            "ARM64_operand", "ARM_arg1", "ARM_arg2", "ARM_arg3",
+            "Hexa_Value", "ARM64_operand", "ARM_arg1", "ARM_arg2", "ARM_arg3",
             "X64_operand", "X64_arg1", "X64_arg2", "X64_arg3"
         ])
 
@@ -165,7 +166,6 @@ def process_csv(input_file, output_file, chunk_size=10000, num_processes=32):
 
     for p in processes:
         p.join()
-
 
 if __name__ == "__main__":
     input_file = 'processed_csv/4Bytes_processed.csv'
