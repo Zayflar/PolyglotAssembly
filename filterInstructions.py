@@ -6,7 +6,8 @@ def classify_argument(arg, is_arm=True):
     if arg == "NO_ARG":
         return ""
     
-    arg = arg.strip().lower()
+    arg = arg.strip()
+    arg_lower = arg.lower()
     
     arm64_registers = {
         *[f"x{i}" for i in range(31)], "xzr",
@@ -34,28 +35,27 @@ def classify_argument(arg, is_arm=True):
     }
 
     if is_arm:
-        base_reg = re.split(r'[\.\/\[]', arg)[0]
+        base_reg = re.split(r'[\.\/\[]', arg_lower)[0]
         if base_reg in arm64_registers:
             return "R"
-        if re.match(r'^p\d+/[zm]$', arg):
+        if re.match(r'^p\d+/[zm]$', arg_lower):
             return "P"
     else:
-        if arg in x64_registers:
+        if arg_lower in x64_registers:
             return "R"
-        ptr_match = re.match(r'^\s*(byte|word|dword|qword)\s+ptr\s*\[([^\]]+)\]', arg)
+        ptr_match = re.match(r'^\s*(byte|word|dword|qword)\s+ptr\s*\[([^\]]+)\]', arg_lower)
         if ptr_match and ptr_match.group(2).strip() in x64_registers:
             return "R"
+        if '[' in arg_lower and ']' in arg_lower:
+            return "M"
 
-    if re.match(r'^#-?0x[0-9a-f]+$', arg) or re.match(r'^#-?\d+$', arg):
+    if re.match(r'^#-?0x[0-9a-f]+$', arg_lower) or re.match(r'^#-?\d+$', arg_lower):
         return "I"
-    
-    if '[' in arg and ']' in arg:
-        return "M"
     
     if '{' in arg and '}' in arg:
         return "L"
     
-    if re.match(r'^(lsl|lsr|asr|ror)\s+#', arg):
+    if re.match(r'^(lsl|lsr|asr|ror)\s+#', arg_lower):
         return "S"
     
     return "UNK"
