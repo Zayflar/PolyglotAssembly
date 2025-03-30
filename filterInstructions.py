@@ -6,7 +6,7 @@ def classify_argument(arg, is_arm=True):
     if arg == "NO_ARG":
         return ""
     
-    arg = arg.strip()
+    arg = arg.strip().lower()
     
     arm64_registers = {
         *[f"x{i}" for i in range(31)], "xzr",
@@ -16,7 +16,8 @@ def classify_argument(arg, is_arm=True):
         *[f"s{i}" for i in range(32)],
         *[f"h{i}" for i in range(32)],
         *[f"b{i}" for i in range(32)],
-        "sp", "pc",
+        "sp", "pc", "zr",
+        *[f"z{i}" for i in range(32)]
     }
     
     x64_registers = {
@@ -28,22 +29,22 @@ def classify_argument(arg, is_arm=True):
         "r8w", "r9w", "r10w", "r11w", "r12w", "r13w", "r14w", "r15w",
         "al", "bl", "cl", "dl", "sil", "dil", "bpl", "spl",
         "r8b", "r9b", "r10b", "r11b", "r12b", "r13b", "r14b", "r15b",
-        "rip", "eflags",
+        "rip", "eflags"
     }
-    
-    if not is_arm:
-        ptr_match = re.match(r'^\s*(byte|word|dword|qword)\s+ptr\s*\[([^\]]+)\]', arg, re.IGNORECASE)
-        if ptr_match:
-            inner_arg = ptr_match.group(2)
-            if inner_arg.lower() in x64_registers:
-                return "R"
-    
-    if is_arm and arg.lower() in arm64_registers:
-        return "R"
-    elif not is_arm and arg.lower() in x64_registers:
-        return "R"
-    
-    if re.match(r'^#-?0x[0-9a-fA-F]+$', arg) or re.match(r'^#-?\d+$', arg):
+
+    if is_arm:
+        base_reg = re.split(r'[\.\[]', arg)[0]
+        if base_reg in arm64_registers:
+            return "R"
+    else:
+        if arg in x64_registers:
+            return "R"
+        
+        ptr_match = re.match(r'^\s*(byte|word|dword|qword)\s+ptr\s*\[([^\]]+)\]', arg)
+        if ptr_match and ptr_match.group(2).strip() in x64_registers:
+            return "R"
+
+    if re.match(r'^#-?0x[0-9a-f]+$', arg) or re.match(r'^#-?\d+$', arg):
         return "I"
     
     if '[' in arg and ']' in arg:
@@ -52,41 +53,44 @@ def classify_argument(arg, is_arm=True):
     if '{' in arg and '}' in arg:
         return "L"
     
-    if re.match(r'^(lsl|lsr|asr|ror)\s+#', arg, re.IGNORECASE):
+    if re.match(r'^(lsl|lsr|asr|ror)\s+#', arg):
         return "S"
     
-    if re.match(r'^p\d+/[zm]$', arg, re.IGNORECASE):
+    if re.match(r'^p\d+/[zm]$', arg):
         return "P"
+    
+    if is_arm and re.match(r'^[xwvqdsbhz]\d+', arg):
+        return "R"
     
     return "UNK"
 
 def format_arguments(ops):
-    if not ops or ops.strip() == "":
-        return ["NO_ARG", "NO_ARG", "NO_ARG"]
+    if not ops or not ops.strip():
+        return ["NO_ARG"] * 3
+    
+    if '{' in ops and '}' in ops:
+        parts = [ops.strip()]
+        parts.extend(["NO_ARG"] * (2 if len(parts) == 1 else 1))
+        return parts[:3]
     
     arguments = []
-    current_arg = ""
+    current = ""
     in_brackets = 0
-    in_braces = 0
     
     for char in ops:
         if char == '[':
             in_brackets += 1
         elif char == ']':
             in_brackets -= 1
-        elif char == '{':
-            in_braces += 1
-        elif char == '}':
-            in_braces -= 1
         
-        if char == ',' and in_brackets == 0 and in_braces == 0:
-            arguments.append(current_arg.strip())
-            current_arg = ""
+        if char == ',' and in_brackets == 0 and len(arguments) < 2:
+            arguments.append(current.strip())
+            current = ""
         else:
-            current_arg += char
+            current += char
     
-    if current_arg:
-        arguments.append(current_arg.strip())
+    if current:
+        arguments.append(current.strip())
     
     while len(arguments) < 3:
         arguments.append("NO_ARG")
@@ -95,79 +99,71 @@ def format_arguments(ops):
 
 def process_row(row):
     try:
-        hexa_value = row[0]
-        arm_operand = row[1]
-        arm_args = [classify_argument(arg, is_arm=True) for arg in format_arguments(row[2])]
-        x64_operand = row[5]
-        x64_args = [classify_argument(arg, is_arm=False) for arg in format_arguments(row[6])]
-        return [hexa_value, arm_operand] + arm_args + [x64_operand] + x64_args
-    except IndexError:
+        hex_val = row[0]
+        arm_op = row[1]
+        arm_args = [classify_argument(arg, True) for arg in format_arguments(row[2])]
+        x64_op = row[5]
+        x64_args = [classify_argument(arg, False) for arg in format_arguments(row[6])]
+        return [hex_val, arm_op] + arm_args + [x64_op] + x64_args
+    except:
         return []
 
 def process_chunk(chunk):
     return [row for row in (process_row(r) for r in chunk) if row]
 
-def worker(input_queue, output_queue):
+def worker(input_q, output_q):
     while True:
-        chunk = input_queue.get()
+        chunk = input_q.get()
         if chunk == "STOP":
-            output_queue.put("DONE")
+            output_q.put("DONE")
             break
-        result = process_chunk(chunk)
-        output_queue.put(result)
+        output_q.put(process_chunk(chunk))
 
-def process_csv(input_file, output_file, chunk_size=10000, num_processes=32):
+def process_csv(input_file, output_file, chunk_size=10000, num_proc=32):
     manager = multiprocessing.Manager()
-    input_queue = manager.Queue()
-    output_queue = manager.Queue()
+    input_q = manager.Queue()
+    output_q = manager.Queue()
 
-    processes = []
-    for _ in range(num_processes):
-        p = multiprocessing.Process(target=worker, args=(input_queue, output_queue))
+    procs = [multiprocessing.Process(target=worker, args=(input_q, output_q)) for _ in range(num_proc)]
+    for p in procs:
         p.start()
-        processes.append(p)
 
-    with open(output_file, 'w', newline='') as outfile:
-        writer = csv.writer(outfile, delimiter='|')
-        writer.writerow([
-            "Hexa_Value", "ARM64_operand", "ARM_arg1", "ARM_arg2", "ARM_arg3",
-            "X64_operand", "X64_arg1", "X64_arg2", "X64_arg3"
-        ])
+    with open(output_file, 'w', newline='') as f:
+        writer = csv.writer(f, delimiter='|')
+        writer.writerow(["Hexa_Value", "ARM64_operand", "ARM_arg1", "ARM_arg2", "ARM_arg3",
+                        "X64_operand", "X64_arg1", "X64_arg2", "X64_arg3"])
 
-        def writer_loop():
-            active_workers = num_processes
-            while active_workers > 0:
-                result = output_queue.get()
-                if result == "DONE":
-                    active_workers -= 1
+        def write_results():
+            active = num_proc
+            while active > 0:
+                res = output_q.get()
+                if res == "DONE":
+                    active -= 1
                 else:
-                    for row in result:
-                        writer.writerow(row)
+                    writer.writerows(res)
 
-        writer_process = multiprocessing.Process(target=writer_loop)
-        writer_process.start()
+        writer_proc = multiprocessing.Process(target=write_results)
+        writer_proc.start()
 
         with open(input_file, 'r') as infile:
             reader = csv.reader(infile, delimiter='|')
-            next(reader)  # skip header
+            next(reader)
             chunk = []
             for row in reader:
                 chunk.append(row)
                 if len(chunk) >= chunk_size:
-                    input_queue.put(chunk)
+                    input_q.put(chunk)
                     chunk = []
             if chunk:
-                input_queue.put(chunk)
+                input_q.put(chunk)
 
-        for _ in range(num_processes):
-            input_queue.put("STOP")
+        for _ in range(num_proc):
+            input_q.put("STOP")
 
-        writer_process.join()
+        writer_proc.join()
 
-    for p in processes:
+    for p in procs:
         p.join()
 
 if __name__ == "__main__":
-    input_file = 'processed_csv/4Bytes_processed.csv'
-    output_file = '4Bytes_filtered.csv'
-    process_csv(input_file, output_file)
+    process_csv('processed_csv/4Bytes_processed.csv', '4Bytes_filtered.csv')
