@@ -39,6 +39,8 @@ def classify_argument(arg, is_arm=True):
             return "R"
         if re.match(r'^p\d+/[zm]$', arg):
             return "P"
+        if is_arm and re.match('^s\d+?$', arg_lower):
+            return "S" 
 
     else:
         if arg in x64_registers:
