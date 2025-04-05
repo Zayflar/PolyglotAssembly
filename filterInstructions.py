@@ -34,21 +34,24 @@ def classify_argument(arg, is_arm=True):
     if is_arm:
         if arg.startswith('{') or arg.startswith('['):
             return "R"
-        base_reg = re.split(r'[\.\/\[]', arg)[0]
-        if base_reg in arm64_registers:
+        elif re.split(r'[\.\/\[]', arg)[0] in arm64_registers:
             return "R"
-        if re.match(r'^p\d+/[zm]$', arg):
+        elif re.match(r'^p\d+/[zm]$', arg):
             return "P"
-        if is_arm and re.match('^s\d+?$', arg_lower):
+        elif is_arm and re.match('^s', arg):
             return "S" 
+        else: 
+            pass
 
     else:
         if arg in x64_registers:
             return "R"
-        if re.match(r'^\s*(byte|word|dword|qword)\s+ptr\s*\[.*\]$', arg):
+        elif re.match(r'^\s*(byte|word|dword|qword)\s+ptr\s*\[.*\]$', arg):
             return "R"
-        if '[' in arg and ']' in arg:
+        elif '[' in arg and ']' in arg:
             return "M"
+        else:
+            pass
 
     if re.match(r'^#?-?0x[0-9a-f]+$', arg) or re.match(r'^#?-?\d+$', arg):
         return "I"
@@ -127,4 +130,4 @@ def process_csv(input_file, output_file, num_workers=8, chunk_size=10000):
     writer_pool.join()
 
 if __name__ == "__main__":
-    process_csv("processed_csv/4Bytes_processed.csv", "4Bytes_filtered.csv", num_workers=32)
+    process_csv("processed_csv/4Bytes_processed.csv", "4Bytes_filtered.csv", num_workers=8)
