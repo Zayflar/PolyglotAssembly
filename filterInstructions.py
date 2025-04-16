@@ -43,9 +43,10 @@ def classify_argument(arg, is_arm=True):
     #S : Shift
     #SF : Suffixe
     #O : Operators
+    #P : Prefetch
 
     if is_arm:
-        if re.match(r'^(pstl|plil)', arg):
+        if re.match(r'^(pstl|pl)', arg):
             return "P"
 
         if re.match(r'^c[0-9]+$', arg):
