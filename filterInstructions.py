@@ -31,8 +31,12 @@ def classify_argument(arg, is_arm=True):
         "r8w", "r9w", "r10w", "r11w", "r12w", "r13w", "r14w", "r15w",
         "al", "bl", "cl", "dl", "sil", "dil", "bpl", "spl",
         "r8b", "r9b", "r10b", "r11b", "r12b", "r13b", "r14b", "r15b",
-        "rip", "eflags", "ah", "bh", "ch", "dh"
+        "rip", "eflags", "ah", "bh", "ch", "dh",
+        "es", "cs", "ss", "ds", "fs", "gs",
+        "cf", "pf", "af", "zf", "sf", "tf", "if", "df", "of",
+        "iopl", "nt", "rf", "vm", "ac", "vif", "vip", "id"
     }
+
 
 
 
@@ -46,7 +50,7 @@ def classify_argument(arg, is_arm=True):
     #P : Prefetch
 
     if is_arm:
-        if re.match(r'^(pstl|pl)', arg):
+        if re.match(r'^(ps|pl)', arg):
             return "P"
 
         if re.match(r'^c[0-9]+$', arg):
