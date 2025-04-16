@@ -45,7 +45,7 @@ def classify_argument(arg, is_arm=True):
     #O : Operators
 
     if is_arm:
-        if re.match(r'^pstl', arg):
+        if re.match(r'^(pstl|plil)', arg):
             return "P"
 
         if re.match(r'^c[0-9]+$', arg):
@@ -106,8 +106,9 @@ def classify_argument(arg, is_arm=True):
     else:
         if arg in x64_registers:
             return "R"
-        if re.match(r'^\s*(byte|word|dword|qword)\s+ptr\s*\[.*\]$', arg):
+        if re.match(r'^\s*(byte|word|dword|qword)', arg):
             return "R"
+
 
 
     if re.match(r'^#?-?0x[0-9a-f]+$', arg) or re.match(r'^#?-?\d+$', arg):
