@@ -22,7 +22,7 @@ def classify_argument(arg, is_arm=True):
      "pow2"]
 
 
-    x64_registers = {
+    x64_registers = [
         "rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rbp", "rsp",
         "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15",
         "eax", "ebx", "ecx", "edx", "esi", "edi", "ebp", "esp",
@@ -35,7 +35,7 @@ def classify_argument(arg, is_arm=True):
         "es", "cs", "ss", "ds", "fs", "gs",
         "cf", "pf", "af", "zf", "sf", "tf", "if", "df", "of",
         "iopl", "nt", "rf", "vm", "ac", "vif", "vip", "id"
-    }
+    ]
 
 
 
@@ -50,7 +50,7 @@ def classify_argument(arg, is_arm=True):
     #P : Prefetch
 
     if is_arm:
-        if re.match(r'^(ps|pl)', arg):
+        if re.match(r'^(ps|pl|pldl)', arg):
             return "P"
 
         if re.match(r'^c[0-9]+$', arg):
@@ -112,6 +112,8 @@ def classify_argument(arg, is_arm=True):
         if arg in x64_registers:
             return "R"
         if re.match(r'^\s*(byte|word|dword|qword)', arg):
+            return "R"
+        if re.match(r'^mm[0-7]', arg):
             return "R"
 
 
