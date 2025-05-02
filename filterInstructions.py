@@ -105,9 +105,10 @@ def classify_argument(arg, is_arm=True):
             return "O"
         if re.match(r'.*vae.*', arg):
             return "O"   
-        if re.match(r'.*(alle|ipas|iall).*',arg):
+        if re.match(r'.*(alle|ipas|iall|civac).*',arg):
             return "I"          
-
+        if re.match(r'\bvl(?:\d+)?\b', arg):
+            return "I"
         if re.match(r'^#', arg): 
             return "I"
 
