@@ -103,9 +103,9 @@ def classify_argument(arg, is_arm=True):
 
         if re.search(r'(' + '|'.join(re.escape(s) for s in arm64_operators) + r')', arg):
             return "O"
-        if re.match(r'vae.*', arg):
+        if re.match(r'.*vae.*', arg):
             return "O"   
-        if re.match(r'(alle|ipas|iall).*',arg):
+        if re.match(r'.*(alle|ipas|iall).*',arg):
             return "I"          
 
         if re.match(r'^#', arg): 
