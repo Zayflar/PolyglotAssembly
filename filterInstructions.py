@@ -111,10 +111,12 @@ def classify_argument(arg, is_arm=True):
     else:
         if arg in x64_registers:
             return "R"
-        if re.match(r'^\s*(byte|word|dword|qword)', arg):
+        if re.match(r'^\s*(byte|word|dword|qword|ds)', arg):
             return "R"
         if re.match(r'^mm[0-7]', arg):
             return "R"
+        if re.match(r'^cs:\s*\[?.*', arg):
+                    return "R"
 
 
 
@@ -122,6 +124,7 @@ def classify_argument(arg, is_arm=True):
         return "I"
     if re.match(r'^(lsl|lsr|asr|ror)\s+#', arg):
         return "S"
+
 
     return "UNK"
 
