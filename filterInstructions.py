@@ -8,7 +8,7 @@ def classify_argument(arg, is_arm=True):
     
     arg = arg.strip().lower()
 
-    arm64_registers = {"xzr", "wzr", "sp", "pc", "zr", "spsel", "nzcv"}
+    arm64_registers = ["xzr", "wzr", "sp", "pc", "zr", "spsel", "nzcv", "fpcr", "daif"]
 
     arm64_suffixes = [
     "eq", "ne", "hs", "lo", "mi", "pl", "vs", "vc",
@@ -117,14 +117,15 @@ def classify_argument(arg, is_arm=True):
             return "R"
         if re.match(r'^st\([0-7]\)$', arg):
             return "R"
+        if re.match(r'.*(ptr )?(cs|ds|es|ss|fs|gs):.*', arg):
+            return "R"
         if re.match(r'^\s*(byte|word|dword|qword|ds)', arg):
             return "R"
         if re.match(r'^mm[0-7]', arg):
             return "R"
         if re.match(r'^dr[0-8].*', arg):
             return "R"
-        if re.match(r'.*(ptr )?(cs|ds|es|ss|fs|gs):.*', arg):
-            return "R"
+
         if re.match(r'^cr[0-8].*', arg):
             return "R"
         if re.match(r'^xmmword.*', arg):
