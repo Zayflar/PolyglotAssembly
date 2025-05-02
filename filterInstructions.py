@@ -123,7 +123,7 @@ def classify_argument(arg, is_arm=True):
             return "R"
         if re.match(r'^dr[0-8].*', arg):
             return "R"
-        if re.match(r'^(ptr )?(cs|ds|es|ss|fs|gs):', arg):
+        if re.match(r'.*(ptr )?(cs|ds|es|ss|fs|gs):.*', arg):
             return "R"
         if re.match(r'^cr[0-8].*', arg):
             return "R"
