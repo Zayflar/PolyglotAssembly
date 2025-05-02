@@ -111,7 +111,8 @@ def classify_argument(arg, is_arm=True):
             return "I"
         if re.match(r'^#', arg): 
             return "I"
-
+        if re.match(r'\b(?:zva|cvac|cvap|civac|ivac|cvau|ivau|ialluis|iallu|isw|sw|cisw)\b', arg):
+            return "I"
 
 
     else:
