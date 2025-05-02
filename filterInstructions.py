@@ -115,13 +115,14 @@ def classify_argument(arg, is_arm=True):
             return "R"
         if re.match(r'^mm[0-7]', arg):
             return "R"
-        if re.match(r'\b(cs|ds|es|ss|fs|gs):', arg):
+        if re.match(r'^(ptr )?(cs|ds|es|ss|fs|gs):', arg):
             return "R"
-        if re.match(r'^xmm', arg):
+        if re.match(r'^xmm[0-9]{1,2}.*', arg):
             return "R"
-        if re.match(r'^cr[0-8]$', arg):
+        if re.match(r'^cr[0-8].*', arg):
             return "R"
-
+        if re.match(r'^xmmword.*', arg):
+            return "M"
 
 
     if re.match(r'^#?-?0x[0-9a-f]+$', arg) or re.match(r'^#?-?\d+$', arg):
