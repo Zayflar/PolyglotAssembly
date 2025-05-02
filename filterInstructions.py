@@ -111,15 +111,15 @@ def classify_argument(arg, is_arm=True):
     else:
         if arg in x64_registers:
             return "R"
+        if re.match(r'xmm[0-9]{1,2}.*', arg):
+            return "R"
         if re.match(r'^\s*(byte|word|dword|qword|ds)', arg):
             return "R"
         if re.match(r'^mm[0-7]', arg):
             return "R"
         if re.match(r'^(ptr )?(cs|ds|es|ss|fs|gs):', arg):
             return "R"
-        if re.match(r'^xmm[0-9]{1,2}.*', arg):
-            return "R"
-        if re.match(r'^cr[0-8].*', arg):
+        if re.match(r'^(cr[0-8]|dr[0-8]).*', arg):
             return "R"
         if re.match(r'^xmmword.*', arg):
             return "M"
