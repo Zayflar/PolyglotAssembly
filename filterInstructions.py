@@ -81,6 +81,8 @@ def classify_argument(arg, is_arm=True):
             return "R"
         if re.match(r'z[0-9]{1,2}.*', arg):
             return "R"
+        if re.match(r'\bvl(?:\d+)?\b', arg):
+            return "I"
 
         if arg.startswith('{'):
             return "R"
