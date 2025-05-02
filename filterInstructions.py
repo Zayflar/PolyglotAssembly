@@ -8,7 +8,7 @@ def classify_argument(arg, is_arm=True):
     
     arg = arg.strip().lower()
 
-    arm64_registers = ["xzr", "wzr", "sp", "pc", "zr", "spsel", "nzcv", "fpcr", "daif"]
+    arm64_registers = ["xzr", "wzr", "sp", "pc", "zr", "spsel", "nzcv", "fpcr", "daif", "fpsr"]
 
     arm64_suffixes = [
     "eq", "ne", "hs", "lo", "mi", "pl", "vs", "vc",
