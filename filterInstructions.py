@@ -128,7 +128,7 @@ def classify_argument(arg, is_arm=True):
             return "R"
         if re.match(r'(ptr \[).*', arg):
             return "M"
-        fi re.match(r'\[.*\]', arg):
+        if re.match(r'\[.*\]', arg):
             return "R"
         if re.match(r'^\s*(byte|word|dword|qword|ds)', arg):
             return "R"
