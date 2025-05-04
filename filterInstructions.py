@@ -120,7 +120,7 @@ def classify_argument(arg, is_arm=True):
             return "R"
         if re.match(r'xmm[0-9]{1,2}.*', arg):
             return "R"
-        if re.match(r'bnd[0-4].*', arg):
+        if re.match(r'bnd[0-9].*', arg):
             return "R"
         if re.match(r'^st\([0-7]\)$', arg):
             return "R"
@@ -130,12 +130,12 @@ def classify_argument(arg, is_arm=True):
             return "R"
         if re.match(r'^\s*(byte|word|dword|qword|ds)', arg):
             return "R"
-        if re.match(r'^mm[0-7]', arg):
+        if re.match(r'^mm[0-9]', arg):
             return "R"
         if re.match(r'^dr[0-9].*', arg):
             return "R"
 
-        if re.match(r'^cr[0-8].*', arg):
+        if re.match(r'^cr[0-9].*', arg):
             return "R"
         if re.match(r'^xmmword.*', arg):
             return "M"
