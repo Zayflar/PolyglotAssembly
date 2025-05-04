@@ -132,7 +132,7 @@ def classify_argument(arg, is_arm=True):
             return "R"
         if re.match(r'^mm[0-7]', arg):
             return "R"
-        if re.match(r'^dr[0-8].*', arg):
+        if re.match(r'^dr[0-9].*', arg):
             return "R"
 
         if re.match(r'^cr[0-8].*', arg):
