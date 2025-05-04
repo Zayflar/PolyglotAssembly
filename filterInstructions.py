@@ -105,7 +105,7 @@ def classify_argument(arg, is_arm=True):
             return "O"
         if re.match(r'.*vae.*', arg):
             return "O"   
-        if re.match(r'.*(alle|ipas|iall|civac|vaae|aside).*',arg):
+        if re.match(r'.*(alle|ipas|iall|civac|vaae|aside|rpaos).*',arg):
             return "I"          
         if re.match(r'\bvl(?:\d+)?\b', arg):
             return "I"
@@ -124,7 +124,9 @@ def classify_argument(arg, is_arm=True):
             return "R"
         if re.match(r'^st\([0-7]\)$', arg):
             return "R"
-        if re.match(r'.*(ptr )?(cs|ds|es|ss|fs|gs|\[):.*', arg):
+        if re.match(r'.*(ptr )?(cs|ds|es|ss|fs|gs):.*', arg):
+            return "R"
+        if re.match(r'(ptr )?(\[).*', arg):
             return "R"
         if re.match(r'^\s*(byte|word|dword|qword|ds)', arg):
             return "R"
