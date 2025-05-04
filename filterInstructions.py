@@ -105,13 +105,13 @@ def classify_argument(arg, is_arm=True):
             return "O"
         if re.match(r'.*vae.*', arg):
             return "O"   
-        if re.match(r'.*(alle|ipas|iall|civac).*',arg):
+        if re.match(r'.*(alle|ipas|iall|civac|vaae).*',arg):
             return "I"          
         if re.match(r'\bvl(?:\d+)?\b', arg):
             return "I"
         if re.match(r'^#', arg): 
             return "I"
-        if re.match(r'\b(?:zva|cvac|cvap|civac|ivac|cvau|ivau|ialluis|iallu|isw|sw|cisw|vaae1os)\b', arg):
+        if re.match(r'\b(?:zva|cvac|cvap|civac|ivac|cvau|ivau|ialluis|iallu|isw|sw|cisw)\b', arg):
             return "I"
 
 
