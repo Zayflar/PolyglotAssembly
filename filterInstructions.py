@@ -8,7 +8,7 @@ def classify_argument(arg, is_arm=True):
     
     arg = arg.strip().lower()
 
-    arm64_registers = ["xzr", "wzr", "sp", "pc", "zr", "spsel", "nzcv", "fpcr", "daif", "fpsr"]
+    arm64_registers = ["xzr", "wzr", "sp", "pc", "zr", "spsel", "nzcv", "fpcr", "daif", "fpsr", "svcr"]
 
     arm64_suffixes = [
     "eq", "ne", "hs", "lo", "mi", "pl", "vs", "vc",
@@ -19,7 +19,7 @@ def classify_argument(arg, is_arm=True):
     arm64_operators = ["add", "sub", "mul", "madd", "msub", "mulh", "udiv", "sdiv", "abs", "and", "orr", 
     "eor", "bic", "mvn", "cmp", "cmn", "tst", "lsl", "lsr", "asr", "ror", "clz", "mov", "neg", "rev", "sxtw",
      "inch", "fmov", "msr", "mrs", "ldp", "stp", "bfi", "b", "tbnz", "tbz", "lslv", "stlxr", "msl", "rndr", "vl8", "vl4",
-     "pow2"]
+     "pow2", "cigsw"]
 
 
     x64_registers = [
@@ -126,7 +126,9 @@ def classify_argument(arg, is_arm=True):
             return "R"
         if re.match(r'.*(ptr )?(cs|ds|es|ss|fs|gs):.*', arg):
             return "R"
-        if re.match(r'(ptr )?(\[).*', arg):
+        if re.match(r'(ptr \[).*', arg):
+            return "M"
+        fi re.match(r'\[.*\]', arg):
             return "R"
         if re.match(r'^\s*(byte|word|dword|qword|ds)', arg):
             return "R"
@@ -137,7 +139,7 @@ def classify_argument(arg, is_arm=True):
 
         if re.match(r'^cr[0-9].*', arg):
             return "R"
-        if re.match(r'^xmmword.*', arg):
+        if re.match(r'^(xmmword|tbyte).*', arg):
             return "M"
 
 
