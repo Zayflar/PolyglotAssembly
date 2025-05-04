@@ -110,7 +110,7 @@ def classify_argument(arg, is_arm=True):
             return "I"          
         if re.match(r'\bvl(?:\d+)?\b', arg):
             return "I"
-        if re.match(r'^#', arg): 
+        if re.match(r'^(#|uxtw)', arg): 
             return "I"
         if re.match(r'\b(?:zva|cvac|cvap|civac|ivac|cvau|ivau|ialluis|iallu|isw|sw|cisw)\b', arg):
             return "I"
@@ -131,6 +131,8 @@ def classify_argument(arg, is_arm=True):
             return "M"
         if re.match(r'\[.*\]', arg):
             return "R"
+        if re.match(r'^(xmmword|tbyte|xword).*', arg):
+            return "M"
         if re.match(r'^\s*(byte|word|dword|qword|ds)', arg):
             return "R"
         if re.match(r'^mm[0-9]', arg):
@@ -140,8 +142,7 @@ def classify_argument(arg, is_arm=True):
 
         if re.match(r'^cr[0-9].*', arg):
             return "R"
-        if re.match(r'^(xmmword|tbyte|xword).*', arg):
-            return "M"
+
 
 
     if re.match(r'^#?-?0x[0-9a-f]+$', arg) or re.match(r'^#?-?\d+$', arg):
