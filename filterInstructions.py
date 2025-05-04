@@ -20,7 +20,7 @@ def classify_argument(arg, is_arm=True):
     arm64_operators = ["add", "sub", "mul", "madd", "msub", "mulh", "udiv", "sdiv", "abs", "and", "orr", 
     "eor", "bic", "mvn", "cmp", "cmn", "tst", "lsl", "lsr", "asr", "ror", "clz", "mov", "neg", "rev", "sxtw",
      "inch", "fmov", "msr", "mrs", "ldp", "stp", "bfi", "b", "tbnz", "tbz", "lslv", "stlxr", "msl", "rndr", "vl8", "vl4",
-     "pow2", "cigsw", "cigvac", "cgvap", "gva", "gzva", "csw"]
+     "pow2", "cigsw", "cigvac", "cgvap", "gva", "gzva", "csw", "igsw"]
 
 
     x64_registers = [
