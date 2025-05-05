@@ -19,7 +19,7 @@ def write_results(output_file, counts):
         for pattern, count in counts.items():
             writer.writerow([count] + list(pattern))
 
-def process_file(input_file, output_file, chunk_size=100000):
+def process_file(input_file, output_file, chunk_size=1000):
     manager = multiprocessing.Manager()
     counts = manager.dict()
     pool = multiprocessing.Pool()
