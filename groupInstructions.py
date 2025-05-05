@@ -1,25 +1,36 @@
-import pandas as pd
+import csv
+from multiprocessing import Pool, cpu_count
 
-def remove_duplicates(input_file, output_file):
-    """
-    Supprime les doublons d'un fichier CSV et sauvegarde le résultat dans un nouveau fichier.
-    
-    :param input_file: Chemin du fichier CSV d'entrée.
-    :param output_file: Chemin du fichier CSV de sortie.
-    """
-    # Lire le fichier CSV
-    df = pd.read_csv(input_file, delimiter='|')
-    
-    # Supprimer les doublons
-    df.drop_duplicates(inplace=True)
-    
-    # Sauvegarder le résultat dans un nouveau fichier CSV
-    df.to_csv(output_file, index=False, sep='|')
-    
-    print(f"Les doublons ont été supprimés. Le fichier résultant est sauvegardé sous '{output_file}'.")
+def process_chunk(chunk, output_file):
+    seen = set()
+    unique_rows = []
+    for row in chunk:
+        key = tuple(row[1:])
+        if key not in seen:
+            seen.add(key)
+            unique_rows.append(row)
+    with open(output_file, 'a', newline='') as f:
+        writer = csv.writer(f, delimiter='|')
+        writer.writerows(unique_rows)
 
-# Exemple d'utilisation
-if __name__ == "__main__":
-    input_file = '4Bytes_filtered.csv'  # Remplacez par le chemin de votre fichier CSV d'entrée
-    output_file = '4Bytes_no_duplicates.csv'  # Remplacez par le chemin de votre fichier CSV de sortie
-    remove_duplicates(input_file, output_file)
+def remove_duplicates(input_file, output_file, chunksize=10000):
+    with open(input_file, 'r') as f:
+        reader = csv.reader(f, delimiter='|')
+        with Pool(cpu_count()) as pool:
+            chunk = []
+            for i, row in enumerate(reader):
+                chunk.append(row)
+                if len(chunk) == chunksize:
+                    pool.apply_async(process_chunk, args=(chunk, output_file))
+                    chunk = []
+            if chunk:
+                pool.apply_async(process_chunk, args=(chunk, output_file))
+            pool.close()
+            pool.join()
+
+
+
+input_file = '4Bytes_filtered.csv'
+output_file = '4Bytes_no_duplicates.csv'
+open(output_file, 'w').close()
+remove_duplicates(input_file, output_file)
