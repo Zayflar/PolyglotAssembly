@@ -6,9 +6,8 @@ import os
 def process_chunk(chunk):
     counts = defaultdict(int)
     for row in chunk:
-        key = tuple(row[1:])
-        counts[key] += 1
-    return dict(counts)
+        counts[tuple(row[1:])] += 1
+    return counts
 
 def process_file(input_file, output_file, chunk_size=300000):
     temp_file = output_file + '.tmp'
@@ -20,35 +19,38 @@ def process_file(input_file, output_file, chunk_size=300000):
     def merge_results(result):
         existing = defaultdict(int)
         if os.path.exists(temp_file):
-            with open(temp_file, 'r') as f:
+            with open(temp_file, 'r', buffering=1<<24) as f:
                 reader = csv.reader(f, delimiter='|')
-                for row in reader:
-                    if row:
-                        existing[tuple(row[1:])] = int(row[0])
+                existing.update({tuple(row[1:]): int(row[0]) for row in reader if row})
+        
         for k, v in result.items():
             existing[k] += v
-        with open(temp_file, 'w', newline='') as f:
+            
+        with open(temp_file, 'w', buffering=1<<24, newline='') as f:
             writer = csv.writer(f, delimiter='|')
-            for k, v in existing.items():
-                writer.writerow([v] + list(k))
+            writer.writerows([v] + list(k) for k, v in existing.items())
 
-    pool = multiprocessing.Pool()
-    lock = multiprocessing.Lock()
+    pool = multiprocessing.Pool(processes=multiprocessing.cpu_count() * 2)
+    results_queue = []
 
-    with open(input_file, 'r') as f:
+    with open(input_file, 'r', buffering=1<<24) as f:
         reader = csv.reader(f, delimiter='|')
         chunk = []
-        for row in reader:
+        for i, row in enumerate(reader):
             chunk.append(row)
             if len(chunk) >= chunk_size:
-                pool.apply_async(process_chunk, args=(chunk,), callback=merge_results)
+                results_queue.append(pool.apply_async(process_chunk, (chunk,), callback=merge_results))
                 chunk = []
+                if i % (chunk_size * 10) == 0:
+                    [r.wait() for r in results_queue]
+                    results_queue = []
+        
         if chunk:
-            pool.apply_async(process_chunk, args=(chunk,), callback=merge_results)
+            pool.apply_async(process_chunk, (chunk,), callback=merge_results)
 
     pool.close()
     pool.join()
-    os.rename(temp_file, output_file)
+    os.replace(temp_file, output_file)
 
 input_file = '4Bytes_filtered.csv'
 output_file = '4Bytes_count_duplicates.csv'
