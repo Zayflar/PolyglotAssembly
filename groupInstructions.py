@@ -20,6 +20,6 @@ def remove_duplicates(input_file, output_file):
 
 # Exemple d'utilisation
 if __name__ == "__main__":
-    input_file = '4Bytes_processed.csv'  # Remplacez par le chemin de votre fichier CSV d'entrée
+    input_file = '4Bytes_filtered.csv'  # Remplacez par le chemin de votre fichier CSV d'entrée
     output_file = '4Bytes_no_duplicates.csv'  # Remplacez par le chemin de votre fichier CSV de sortie
     remove_duplicates(input_file, output_file)
