@@ -21,7 +21,7 @@ def read_csv_chunks(file_path, chunk_size):
         if chunk:
             yield chunk
 
-def process_file(input_file, output_file, chunk_size=300000, max_processes=32):
+def process_file(input_file, output_file, chunk_size=30000, max_processes=32):
     lock = multiprocessing.Lock()
     manager = multiprocessing.Manager()
     global_counts = manager.dict()
