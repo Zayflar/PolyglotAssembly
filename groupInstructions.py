@@ -1,44 +1,39 @@
 import csv
 import multiprocessing
 from collections import defaultdict
+import os
 
 def process_chunk(chunk):
-    local_counts = defaultdict(int)
+    counts = defaultdict(int)
     for row in chunk:
-        key = tuple(row[1:]) 
-        local_counts[key] += 1
-    return local_counts
+        key = tuple(row[1:])
+        counts[key] += 1
+    return dict(counts)
 
-def process_file(input_file, output_file, chunk_size=10000, update_interval=10):
-    manager = multiprocessing.Manager()
-    counts = manager.dict()
-    lock = multiprocessing.Lock()
-    processed_chunks = 0
-    
-    def init_output():
-        with open(output_file, 'w', newline='') as f:
-            pass
+def process_file(input_file, output_file, chunk_size=10000):
+    temp_file = output_file + '.tmp'
+    if os.path.exists(temp_file):
+        os.remove(temp_file)
+    if os.path.exists(output_file):
+        os.remove(output_file)
 
-    def write_partial_results():
-        with lock:
-            current_counts = dict(counts)
-            with open(output_file, 'w', newline='') as f:
-                writer = csv.writer(f, delimiter='|')
-                for pattern, count in current_counts.items():
-                    writer.writerow([count] + list(pattern))
+    def merge_results(result):
+        existing = defaultdict(int)
+        if os.path.exists(temp_file):
+            with open(temp_file, 'r') as f:
+                reader = csv.reader(f, delimiter='|')
+                for row in reader:
+                    if row:
+                        existing[tuple(row[1:])] = int(row[0])
+        for k, v in result.items():
+            existing[k] += v
+        with open(temp_file, 'w', newline='') as f:
+            writer = csv.writer(f, delimiter='|')
+            for k, v in existing.items():
+                writer.writerow([v] + list(k))
 
-    init_output()
     pool = multiprocessing.Pool()
-
-    def callback(result):
-        nonlocal processed_chunks
-        with lock:
-            for key, count in result.items():
-                counts[key] = counts.get(key, 0) + count
-            processed_chunks += 1
-            
-            if processed_chunks % update_interval == 0:
-                write_partial_results()
+    lock = multiprocessing.Lock()
 
     with open(input_file, 'r') as f:
         reader = csv.reader(f, delimiter='|')
@@ -46,15 +41,14 @@ def process_file(input_file, output_file, chunk_size=10000, update_interval=10):
         for row in reader:
             chunk.append(row)
             if len(chunk) >= chunk_size:
-                pool.apply_async(process_chunk, args=(chunk,), callback=callback)
+                pool.apply_async(process_chunk, args=(chunk,), callback=merge_results)
                 chunk = []
-        
         if chunk:
-            pool.apply_async(process_chunk, args=(chunk,), callback=callback)
+            pool.apply_async(process_chunk, args=(chunk,), callback=merge_results)
 
     pool.close()
     pool.join()
-    write_partial_results()  
+    os.rename(temp_file, output_file)
 
 input_file = '4Bytes_filtered.csv'
 output_file = '4Bytes_count_duplicates.csv'
