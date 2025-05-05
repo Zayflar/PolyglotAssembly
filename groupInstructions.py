@@ -4,10 +4,11 @@ from collections import defaultdict
 import os
 
 def process_chunk(chunk):
-    counts = defaultdict(int)
+    counts = defaultdict(lambda: {'count': 0, 'opcodes': []})
     for row in chunk:
         key = tuple(row[1:])
-        counts[key] += 1
+        counts[key]['count'] += 1
+        counts[key]['opcodes'].append(row[0])  # Stocke l'opcode
     return dict(counts)
 
 def process_file(input_file, output_file, chunk_size=100000, max_processes=32):
@@ -22,21 +23,25 @@ def process_file(input_file, output_file, chunk_size=100000, max_processes=32):
     def worker(chunk, output, lock):
         local_counts = process_chunk(chunk)
         with lock:
-            existing = defaultdict(int)
+            existing = defaultdict(lambda: {'count': 0, 'opcodes': []})
             if os.path.exists(output):
                 with open(output, 'r') as f:
                     reader = csv.reader(f, delimiter='|')
                     for row in reader:
                         if row:
-                            existing[tuple(row[1:])] = int(row[0])
+                            key = tuple(row[1:-1])  # Exclut count et opcodes
+                            existing[key]['count'] = int(row[0])
+                            existing[key]['opcodes'] = row[-1].split(',')
             
             for k, v in local_counts.items():
-                existing[k] += v
+                existing[k]['count'] += v['count']
+                existing[k]['opcodes'].extend(v['opcodes'])
             
             with open(output, 'w', newline='') as f:
                 writer = csv.writer(f, delimiter='|')
                 for k, v in existing.items():
-                    writer.writerow([v] + list(k))
+                    opcodes_str = ','.join(v['opcodes'])
+                    writer.writerow([v['count']] + list(k) + [opcodes_str])
 
     processes = []
     with open(input_file, 'r') as f:
