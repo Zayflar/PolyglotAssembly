@@ -1,25 +1,48 @@
 import csv
+import multiprocessing
 from collections import defaultdict
 
-def count_duplicates(input_file, output_file):
-    counts = defaultdict(int)
-    examples = {}
+def process_chunk(chunk):
+    local_counts = defaultdict(int)
+    for row in chunk:
+        key = tuple(row[1:]) 
+        local_counts[key] += 1
+    return local_counts
+
+def merge_counts(counts, result):
+    for key, count in result.items():
+        counts[key] += count
+
+def write_results(output_file, counts):
+    with open(output_file, 'w', newline='') as f:
+        writer = csv.writer(f, delimiter='|')
+        for pattern, count in counts.items():
+            writer.writerow([count] + list(pattern))
+
+def process_file(input_file, output_file, chunk_size=100000):
+    manager = multiprocessing.Manager()
+    counts = manager.dict()
+    pool = multiprocessing.Pool()
+
+    def callback(result):
+        merge_counts(counts, result)
 
     with open(input_file, 'r') as f:
         reader = csv.reader(f, delimiter='|')
+        chunk = []
         for row in reader:
-            if not row:
-                continue
-            key = tuple(row[1:])
-            counts[key] += 1
-            if key not in examples:
-                examples[key] = row[1:]
+            chunk.append(row)
+            if len(chunk) >= chunk_size:
+                pool.apply_async(process_chunk, args=(chunk,), callback=callback)
+                chunk = []
+        
+        if chunk:
+            pool.apply_async(process_chunk, args=(chunk,), callback=callback)
 
-    with open(output_file, 'w', newline='') as f:
-        writer = csv.writer(f, delimiter='|')
-        for key, count in counts.items():
-            writer.writerow([count] + list(examples[key]))
+    pool.close()
+    pool.join()
+    write_results(output_file, dict(counts))
 
 input_file = '4Bytes_filtered.csv'
 output_file = '4Bytes_count_duplicates.csv'
-count_duplicates(input_file, output_file)
+process_file(input_file, output_file)
