@@ -5,27 +5,30 @@ from collections import defaultdict
 def process_chunk(chunk):
     local_counts = defaultdict(int)
     for row in chunk:
-        key = tuple(row[1:]) 
+        key = tuple(row[1:])
         local_counts[key] += 1
     return local_counts
 
-def merge_counts(counts, result):
-    for key, count in result.items():
-        counts[key] += count
-
-def write_results(output_file, counts):
-    with open(output_file, 'w', newline='') as f:
-        writer = csv.writer(f, delimiter='|')
-        for pattern, count in counts.items():
-            writer.writerow([count] + list(pattern))
-
-def process_file(input_file, output_file, chunk_size=1000):
+def process_file(input_file, output_file, chunk_size=1000, update_interval=100):
     manager = multiprocessing.Manager()
     counts = manager.dict()
-    pool = multiprocessing.Pool()
-
+    lock = multiprocessing.Lock()
+    processed_chunks = 0
+    
     def callback(result):
-        merge_counts(counts, result)
+        nonlocal processed_chunks
+        with lock:
+            for key, count in result.items():
+                counts[key] = counts.get(key, 0) + count
+            processed_chunks += 1
+            
+            if processed_chunks % update_interval == 0:
+                with open(output_file, 'w', newline='') as f:
+                    writer = csv.writer(f, delimiter='|')
+                    for pattern, count in dict(counts).items():
+                        writer.writerow([count] + list(pattern))
+
+    pool = multiprocessing.Pool()
 
     with open(input_file, 'r') as f:
         reader = csv.reader(f, delimiter='|')
@@ -41,7 +44,12 @@ def process_file(input_file, output_file, chunk_size=1000):
 
     pool.close()
     pool.join()
-    write_results(output_file, dict(counts))
+    
+    
+    with open(output_file, 'w', newline='') as f:
+        writer = csv.writer(f, delimiter='|')
+        for pattern, count in dict(counts).items():
+            writer.writerow([count] + list(pattern))
 
 input_file = '4Bytes_filtered.csv'
 output_file = '4Bytes_count_duplicates.csv'
