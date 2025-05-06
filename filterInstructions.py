@@ -228,6 +228,6 @@ def process_csv(input_file, output_file, chunk_size=1000, max_processes=32):
         p.join()
 
 if __name__ == "__main__":
-    input_file = 'processed_csv/4Bytes_processed_2.csv'
-    output_file = '4Bytes_filtered_2.csv'
+    input_file = 'processed_csv/4Bytes_processed_3.csv'
+    output_file = '4Bytes_filtered_3.csv'
     process_csv(input_file, output_file, chunk_size=1000, max_processes=32)
