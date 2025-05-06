@@ -65,5 +65,5 @@ def process_file(input_file, output_file, chunk_size=100000, max_processes=32):
     os.rename(temp_file, output_file)
 
 input_file = '4Bytes_filtered.csv'
-output_file = '4Bytes_count_duplicates.csv'
+output_file = '4Bytes_count.csv'
 process_file(input_file, output_file)
